@@ -1,0 +1,2 @@
+# Phase 1 application dependency. Later phases add and pin packages as features land.
+streamlit==1.50.0
