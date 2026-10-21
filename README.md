@@ -22,7 +22,7 @@ The goal is to build a simple, robust, measurable, and production-minded RAG sys
 
 ### Current implementation status
 
-Phase 1 is a runnable project scaffold: Python dependency pin, placeholder Streamlit entry point, a LiteLLM model configuration, and Docker Compose services for the application, Qdrant, PostgreSQL, LiteLLM Proxy, and Valkey. It does not yet ingest TechQA or answer questions. Later phases will add retrieval, evaluation, conversation storage, caching, and Langfuse instrumentation.
+Phase 1 provides the runtime scaffold. Phase 2 adds a reproducible TechQA download, corpus inspection, separate QA manifest, and frozen development/test question IDs. The app still does not answer questions; chunking, embeddings, indexing, generation, caching, and Langfuse instrumentation follow in later phases.
 
 To inspect the scaffold locally, install Docker Engine with Compose, copy `.env.example` to `.env`, and replace the `CHANGE_ME` values with private credentials. The Gemini key is required for actual gateway requests. Then run:
 
@@ -33,9 +33,31 @@ docker compose up --build
 
 Open `http://localhost:8501` for the placeholder app. Qdrant, PostgreSQL, LiteLLM, and Valkey are wired in Compose, but the Phase 1 app does not call them. Langfuse Cloud settings are accepted through environment variables; tracing begins when the application workflow is implemented. No credentials should be committed.
 
-The pinned Python version is 3.11. The current `requirements.txt` contains only the Phase 1 application dependency; later phases will pin their added packages. For a local run without Docker, install that manifest and run `python -m streamlit run app/streamlit_app.py`.
+The pinned Python version is 3.11. `requirements.txt` now pins Streamlit and the RAGAS 0.4.3 evaluation stack, including the compatible pre-1.0 LangChain and Pydantic versions required by that RAGAS release. Later phases will pin their added retrieval and application packages. For a local run without Docker, install that manifest and run `python -m streamlit run app/streamlit_app.py`.
 
-The planned ingestion entry point is `docker compose run --rm rag-app python scripts/ingest.py`. It will be created during the ingestion phase, so it is not runnable yet. Initial TechQA loading remains a separate batch command; this project does not need a task broker for the fixed corpus.
+Prepare the dataset from the pinned NVIDIA revision with either the local Python environment or the application image:
+
+```bash
+python scripts/prepare_dataset.py
+# or: docker compose run --rm rag-app python scripts/prepare_dataset.py
+python -m unittest discover -s tests
+```
+
+The first command downloads `corpus.zip` and `train.json` into ignored `data/raw/techqa/`, safely extracts the archive into `data/raw/techqa/extracted/<corpus-version>/`, writes canonical UTF-8 documents into `data/processed/techqa/documents/<corpus-version>/`, and prints actual audit counts. It needs network access to Hugging Face on the first run. To inspect already downloaded files offline, pass `--skip-download`.
+
+Phase 2 creates:
+
+- `corpus_manifest.jsonl`: source paths, checksums, encoding, title/section metadata, size, version, duplicate status, and canonical paths
+- `qa_manifest.jsonl`: evaluation questions and labels with resolved source IDs, provenance hashes, blocking issues, and non-blocking audit flags
+- `splits.json`: frozen development and held-out IDs
+- `evaluation/*.jsonl`: materialized answerable and unanswerable development/test records
+- `inspection_report.json`: source hashes/sizes, schema profile, data-quality counts, corpus coverage, collisions, and leakage checks
+
+The split targets are 100 answerable development questions, 100 held-out answerable questions, and 20 unanswerable questions in each group; shared source documents and near-duplicate questions stay together, so actual counts may differ. The script rejects a held-out answerable target below the challenge minimum of 20 and fails if development/test IDs, evidence documents, or question fingerprints overlap. Inspect `inspection_report.json` and resolve missing or disputed sources before treating the benchmark as frozen. Only the versioned canonical source documents are intended for indexing. QA answers and gold context text stay outside that directory.
+
+Run `python scripts/show_qa_examples.py` after preparation to preview records `TRAIN_Q000`, `TRAIN_Q001`, and `TRAIN_Q002` with their answerability labels and a short gold-context excerpt. These previews are for human inspection only. If raw files already exist, the preparation script reuses them and records their SHA-256 hashes; verify their provenance before claiming a pinned dataset run.
+
+The later ingestion command will be `docker compose run --rm rag-app python scripts/ingest.py`; chunking and Qdrant/BM25 indexing are not implemented in Phase 2. Initial TechQA preparation remains a separate batch command without a task broker.
 
 ---
 
@@ -152,7 +174,7 @@ canonical versioned document manifest
 chunk -> embed -> index in Qdrant and BM25
 ```
 
-Deduplication uses source filename and normalized content hash. The manifest records document ID, source path, checksum, corpus version, and ingestion status. Gold context filenames are checked against the extracted corpus and missing or conflicting files are reported.
+Deduplication uses normalized content hashes while preserving every source filename mapping. The loader rejects path traversal, records UTF-8 or Windows-1252 decoding, extracts title and section-heading metadata, and writes immutable version-scoped artifacts so an older run cannot leave stale documents in a newer corpus. Gold context filenames are checked against the extracted corpus; missing, ambiguous, and content-different evidence is reported without placing gold context text in the indexable corpus.
 
 The following are **not** indexed:
 
@@ -319,16 +341,16 @@ The primary evaluation uses a frozen held-out set containing at least 20 answera
 
 ### Required challenge metrics
 
-- Precision@k
-- Recall@k
-- Faithfulness / answer support: whether the retrieved context contains sufficient evidence for the answer
+- Precision@k through RAGAS `IDBasedContextPrecision`, using the top-k unique source-document IDs
+- Recall@k through RAGAS `IDBasedContextRecall`, using TechQA gold source-document IDs
+- Faithfulness through RAGAS `Faithfulness`, measuring whether generated claims are supported by retrieved context
 
 ### Additional quality metrics
 
-- MRR
-- Answer correctness
+- MRR through a project-defined RAGAS `SingleTurnMetric` over source-document IDs
+- Answer correctness through RAGAS `AnswerCorrectness`
 
-If faithfulness or correctness uses an automated judge, the judge model and prompt are pinned and a sample is manually audited. Latency, token use, index size, and semantic-cache behavior are reported separately from the headline quality metrics.
+RAGAS is pinned to 0.4.3. Scored generation evaluation uses the fixed `evaluation-judge` LiteLLM alias with fallback disabled and temperature zero. The initial answer-correctness configuration uses RAGAS factual correctness only (`weights=[1.0, 0.0]`); semantic-similarity weighting remains disabled until the project freezes one evaluation embedding model. Judge prompts, model, RAGAS version, and correctness weights must be recorded with each scored run, and a sample must be manually audited. Latency, token use, index size, and semantic-cache behavior are reported separately from the headline quality metrics.
 
 ### Unanswerable-question evaluation
 

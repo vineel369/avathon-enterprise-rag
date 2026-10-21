@@ -3,6 +3,11 @@ model_list:
     litellm_params:
       model: gemini/gemini-2.5-flash
       api_key: os.environ/GEMINI_API_KEY
+  # Fixed alias used only by scored RAGAS evaluation; no runtime fallback.
+  - model_name: evaluation-judge
+    litellm_params:
+      model: gemini/gemini-2.5-flash
+      api_key: os.environ/GEMINI_API_KEY
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY

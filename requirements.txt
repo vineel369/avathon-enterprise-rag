@@ -1,2 +1,12 @@
-# Phase 1 application dependency. Later phases add and pin packages as features land.
 streamlit==1.50.0
+
+# RAGAS 0.4.3 imports APIs removed by LangChain 1.x / community 0.4.x.
+# Keep this compatibility set pinned until RAGAS removes those imports.
+ragas==0.4.3
+instructor==1.17.0
+openai==2.54.0
+pydantic==2.12.5
+langchain==0.3.30
+langchain-core==0.3.86
+langchain-community==0.3.31
+langchain-openai==0.3.35

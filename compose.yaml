@@ -60,11 +60,15 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:?Set POSTGRES_USER}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:?Set POSTGRES_DB}
       VALKEY_URL: redis://valkey:6379/0
       LITELLM_BASE_URL: http://llm-gateway:4000
+      LITELLM_API_KEY: ${LITELLM_MASTER_KEY:?Set LITELLM_MASTER_KEY}
+      RAGAS_EVALUATOR_MODEL: ${RAGAS_EVALUATOR_MODEL:-evaluation-judge}
       LANGFUSE_HOST: ${LANGFUSE_HOST:-https://cloud.langfuse.com}
       LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
       LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
     ports:
       - "127.0.0.1:8501:8501"
+    volumes:
+      - ./data:/app/data
     depends_on:
       postgres:
         condition: service_healthy
