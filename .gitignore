@@ -1,5 +1,6 @@
 .env
 .venv/
+.trunk
 __pycache__/
 .pytest_cache/
 .mypy_cache/
@@ -8,6 +9,9 @@ __pycache__/
 data/raw/
 data/processed/
 data/indexes/
+data/tokenizers/
+data/.tmp/
+data/.test-tmp/
 results/
 *.log
 .DS_Store

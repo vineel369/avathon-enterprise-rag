@@ -6,7 +6,7 @@ import argparse
 import json
 from pathlib import Path
 
-from prepare_dataset import load_qa
+from scripts.data_preparation.prepare_dataset import load_qa
 
 
 def main() -> None:

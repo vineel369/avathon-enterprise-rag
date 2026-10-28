@@ -1,0 +1,135 @@
+{
+  "status": "planned_not_scored",
+  "selection_split": "development_only",
+  "paid_usage_allowed": false,
+  "baseline": {
+    "model": "BAAI/bge-base-en-v1.5",
+    "size": 384,
+    "overlap": 64
+  },
+  "models": [
+    {
+      "id": "BAAI/bge-base-en-v1.5",
+      "execution": "local",
+      "dimensions": [
+        768
+      ]
+    },
+    {
+      "id": "Qwen/Qwen3-Embedding-0.6B",
+      "execution": "local",
+      "dimensions": [
+        1024
+      ]
+    },
+    {
+      "id": "jinaai/jina-embeddings-v2-base-en",
+      "execution": "local",
+      "dimensions": [
+        768
+      ]
+    },
+    {
+      "id": "gemini-embedding-2",
+      "execution": "standard_free_tier_only",
+      "dimensions": [
+        768,
+        1536,
+        3072
+      ]
+    }
+  ],
+  "stages": [
+    {
+      "name": "boundary_baseline",
+      "strategies": [
+        "fixed",
+        "recursive",
+        "structure"
+      ],
+      "size": 384,
+      "overlap": 64
+    },
+    {
+      "name": "model_screen",
+      "shared_text_and_boundaries": true,
+      "size": 384,
+      "overlap": 64,
+      "requires": "Phase-4 embedding adapters and full-corpus dense indexes",
+      "strategy": "fixed"
+    },
+    {
+      "name": "gemini_dimensions",
+      "dimensions": [
+        768,
+        1536,
+        3072
+      ],
+      "requires": "Gemini free-tier feasibility; identical chunks and development queries",
+      "selection": "smallest dimension within predeclared quality tolerance; before eliminating or freezing Gemini"
+    },
+    {
+      "name": "size",
+      "sizes": [
+        256,
+        384,
+        480
+      ],
+      "overlap": 64,
+      "max_models": 2,
+      "max_strategies": 2,
+      "requires": "development-selected finalists"
+    },
+    {
+      "name": "overlap",
+      "overlaps": [
+        32,
+        64,
+        96
+      ],
+      "size": "development_selected"
+    },
+    {
+      "name": "long_context",
+      "sizes": [
+        768,
+        1024
+      ],
+      "overlap": 64,
+      "requires": "surviving model input limit permits complete inputs"
+    },
+    {
+      "name": "hybrid_confirmation",
+      "max_configurations": 2,
+      "requires": "BM25/RRF and optional reranker"
+    }
+  ],
+  "primary_selection": [
+    "audited_evidence_coverage_at_fixed_context_budget",
+    "source_recall@5"
+  ],
+  "supporting_quality": [
+    "source_precision@5",
+    "mrr",
+    "finalist_answer_correctness"
+  ],
+  "controls": [
+    "full_corpus_search",
+    "same_development_queries",
+    "fixed_evaluation_tokenizer",
+    "fixed_retrieved_token_budget",
+    "held_out_questions_never_used_for_selection"
+  ],
+  "pending_before_scoring": [
+    "freeze development tie tolerance",
+    "pin candidate revisions and formatting",
+    "freeze evaluation tokenizer and retrieval/context budgets",
+    "verify free-tier quota and data-use eligibility"
+  ],
+  "winner": null,
+  "chunking_strategy_versions": {
+    "fixed": "1",
+    "recursive": "1",
+    "structure": "2"
+  }
+}

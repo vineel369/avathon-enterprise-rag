@@ -8,10 +8,10 @@ import tempfile
 import unittest
 import zipfile
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from prepare_dataset import build_corpus, build_qa, make_splits  # noqa: E402
-from ragas_evaluation import score_generation  # noqa: E402
-from retrieval_metrics import (  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from scripts.data_preparation.prepare_dataset import build_corpus, build_qa, make_splits  # noqa: E402
+from scripts.evaluation.ragas_evaluation import score_generation  # noqa: E402
+from scripts.evaluation.retrieval_metrics import (  # noqa: E402
     IDBasedMeanReciprocalRank,
     precision_recall_at_k,
     reciprocal_rank,
